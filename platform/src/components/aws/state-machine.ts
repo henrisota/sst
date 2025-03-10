@@ -4,6 +4,7 @@ import { Link } from "../link";
 import { sfn } from "@pulumi/aws";
 import { StateMachineArgs as PulumiStateMachineArgs } from "@pulumi/aws/sfn";
 import { Input } from "../input";
+import { physicalName } from "../naming";
 
 export interface StateMachineDefinition {}
 
@@ -55,6 +56,7 @@ export class StateMachine extends Component implements Link.Linkable {
           undefined,
           `${name}StateMachine`,
           {
+            name: physicalName(80, name),
             definition: args.definition
           } as PulumiStateMachineArgs,
           { parent: self }
