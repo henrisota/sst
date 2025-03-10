@@ -70,7 +70,7 @@ export class StateMachine extends Component implements Link.Linkable {
           `${name}StateMachine`,
           {
             name: physicalName(80, name),
-            definition: args.definition,
+            definition: $jsonStringify(args.definition),
             roleArn: args.roleArn
           } as PulumiStateMachineArgs,
           { parent: self }
