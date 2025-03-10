@@ -6,7 +6,20 @@ import { StateMachineArgs as PulumiStateMachineArgs } from "@pulumi/aws/sfn";
 import { Input } from "../input";
 import { physicalName } from "../naming";
 
-export interface StateMachineDefinition {}
+type QueryLanguage = 'JSONPath' | 'JSONata' | string;
+
+interface States {
+  [key: string]: any;
+}
+
+export interface StateMachineDefinition {
+  StartAt: keyof States;
+  States: States;
+  QueryLanguage?: QueryLanguage;
+  Comment?: string;
+  Version?: string;
+  TimeoutSeconds?: number;
+}
 
 export interface StateMachineArgs extends Omit<PulumiStateMachineArgs, 'definition'> {
   /**
