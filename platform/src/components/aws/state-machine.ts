@@ -30,6 +30,10 @@ interface BaseState {
   QueryLanguage?: QueryLanguage;
 }
 
+interface Assignable {
+  Assign?: Record<string, unknown>;
+}
+
 interface Endable {
   End: true;
 }
@@ -40,26 +44,30 @@ interface Nextable {
 
 type EndableOrNextable = Either<Endable, Nextable>;
 
-type ChoiceState = BaseState & {
-  readonly Type: "Choice";
-};
+type ChoiceState = BaseState &
+  Assignable & {
+    readonly Type: "Choice";
+  };
 
 type FailState = BaseState & {
   readonly Type: "Fail";
 };
 
 type MapState = BaseState &
-  EndableOrNextable & {
+  EndableOrNextable &
+  Assignable & {
     readonly Type: "Map";
   };
 
 type ParallelState = BaseState &
-  EndableOrNextable & {
+  EndableOrNextable &
+  Assignable & {
     readonly Type: "Parallel";
   };
 
 type PassState = BaseState &
-  EndableOrNextable & {
+  EndableOrNextable &
+  Assignable & {
     readonly Type: "Pass";
   };
 
@@ -68,12 +76,14 @@ type SucceedState = BaseState & {
 };
 
 type TaskState = BaseState &
-  EndableOrNextable & {
+  EndableOrNextable &
+  Assignable & {
     readonly Type: "Task";
   };
 
 type WaitState = BaseState &
-  EndableOrNextable & {
+  EndableOrNextable &
+  Assignable & {
     readonly Type: "Wait";
   };
 
