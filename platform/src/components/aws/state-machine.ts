@@ -6,22 +6,98 @@ import { StateMachineArgs as PulumiStateMachineArgs } from "@pulumi/aws/sfn";
 import { Input } from "../input";
 import { physicalName } from "../naming";
 
-type QueryLanguage = 'JSONPath' | 'JSONata' | string;
+type Never<T, U> = {
+  [K in Exclude<keyof U, keyof T>]?: never;
+};
+type Either<T, U> = (T & Never<T, U>) | (U & Never<U, T>);
 
-interface States {
-  [key: string]: any;
+type QueryLanguage = "JSONata" | "JSONPath" | string;
+
+type StateName = string;
+type StateType =
+  | "Choice"
+  | "Fail"
+  | "Map"
+  | "Parallel"
+  | "Pass"
+  | "Succeed"
+  | "Task"
+  | "Wait";
+
+interface BaseState {
+  Type: StateType;
+  Comment?: string;
+  QueryLanguage?: QueryLanguage;
 }
 
+interface Endable {
+  End: true;
+}
+
+interface Nextable {
+  Next: StateName;
+}
+
+type EndableOrNextable = Either<Endable, Nextable>;
+
+type ChoiceState = BaseState & {
+  readonly Type: "Choice";
+};
+
+type FailState = BaseState & {
+  readonly Type: "Fail";
+};
+
+type MapState = BaseState &
+  EndableOrNextable & {
+    readonly Type: "Map";
+  };
+
+type ParallelState = BaseState &
+  EndableOrNextable & {
+    readonly Type: "Parallel";
+  };
+
+type PassState = BaseState &
+  EndableOrNextable & {
+    readonly Type: "Pass";
+  };
+
+type SucceedState = BaseState & {
+  readonly Type: "Succeed";
+};
+
+type TaskState = BaseState &
+  EndableOrNextable & {
+    readonly Type: "Task";
+  };
+
+type WaitState = BaseState &
+  EndableOrNextable & {
+    readonly Type: "Wait";
+  };
+
+type State =
+  | ChoiceState
+  | FailState
+  | MapState
+  | ParallelState
+  | PassState
+  | SucceedState
+  | TaskState
+  | WaitState;
+
 export interface StateMachineDefinition {
-  StartAt: keyof States;
-  States: States;
+  StartAt: StateName;
+  States: Record<StateName, State>;
   QueryLanguage?: QueryLanguage;
   Comment?: string;
   Version?: string;
   TimeoutSeconds?: number;
 }
 
-export interface StateMachineArgs extends Omit<PulumiStateMachineArgs, 'definition'> {
+export interface StateMachineArgs
+  extends Omit<PulumiStateMachineArgs, "definition"> {
   /**
    * The [Amazon States Language](https://docs.aws.amazon.com/step-functions/latest/dg/concepts-amazon-states-language.html)
    * definition of the state machine.
@@ -52,7 +128,7 @@ export class StateMachine extends Component implements Link.Linkable {
   constructor(
     name: string,
     args: StateMachineArgs,
-    opts: ComponentResourceOptions = {}
+    opts: ComponentResourceOptions = {},
   ) {
     super(__pulumiType, name, args, opts);
     const self = this;
@@ -71,10 +147,10 @@ export class StateMachine extends Component implements Link.Linkable {
           {
             name: physicalName(80, name),
             definition: $jsonStringify(args.definition),
-            roleArn: args.roleArn
+            roleArn: args.roleArn,
           } as PulumiStateMachineArgs,
-          { parent: self }
-        )
+          { parent: self },
+        ),
       );
     }
   }
@@ -100,7 +176,7 @@ export class StateMachine extends Component implements Link.Linkable {
     return {
       /**
        * The Amazon Step Functions State Machine.
-        */
+       */
       stateMachine: this.stateMachine,
     };
   }
@@ -144,7 +220,12 @@ export class StateMachine extends Component implements Link.Linkable {
   ) {
     return new StateMachine(name, {
       ref: true,
-      stateMachine: sfn.StateMachine.get(`${name}StateMachine`, stateMachineName, undefined, opts)
+      stateMachine: sfn.StateMachine.get(
+        `${name}StateMachine`,
+        stateMachineName,
+        undefined,
+        opts,
+      ),
     } satisfies StateMachineRef as unknown as StateMachineArgs);
   }
 
@@ -152,9 +233,9 @@ export class StateMachine extends Component implements Link.Linkable {
   public getSSTLink() {
     return {
       properties: {
-        arn: this.arn
-      }
-    }
+        arn: this.arn,
+      },
+    };
   }
 }
 
