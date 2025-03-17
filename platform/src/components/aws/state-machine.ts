@@ -24,6 +24,23 @@ type StateType =
   | "Task"
   | "Wait";
 
+type ErrorCode =
+  | "States.ALL"
+  | "States.HeartbeatTimeout"
+  | "States.Timeout"
+  | "States.TaskFailed"
+  | "States.Permissions"
+  | "States.ResultPathMatchFailure"
+  | "States.ParameterPathFailure"
+  | "States.QueryEvaluationError"
+  | "States.BranchFailed"
+  | "States.NoChoiceMatched"
+  | "States.IntrinsicFailure"
+  | "States.ExceedToleratedFailureThreshold"
+  | "States.ItemReaderFailed"
+  | "States.ResultWriterFailed"
+  | string;
+
 interface BaseState {
   Type: StateType;
   Comment?: string;
