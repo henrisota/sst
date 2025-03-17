@@ -41,6 +41,15 @@ type ErrorCode =
   | "States.ResultWriterFailed"
   | string;
 
+interface Retrier {
+  ErrorEquals: ErrorCode[];
+  IntervalSeconds?: number;
+  MaxAttempts?: number;
+  MaxDelaySeconds?: number;
+  JitterStrategy?: string;
+  BackoffRate?: number;
+}
+
 interface BaseState {
   Type: StateType;
   Comment?: string;
@@ -59,6 +68,10 @@ interface Nextable {
   Next: StateName;
 }
 
+interface Retriable {
+  Retry?: Retrier[];
+}
+
 type EndableOrNextable = Either<Endable, Nextable>;
 
 type ChoiceState = BaseState &
@@ -72,13 +85,15 @@ type FailState = BaseState & {
 
 type MapState = BaseState &
   EndableOrNextable &
-  Assignable & {
+  Assignable &
+  Retriable & {
     readonly Type: "Map";
   };
 
 type ParallelState = BaseState &
   EndableOrNextable &
-  Assignable & {
+  Assignable &
+  Retriable & {
     readonly Type: "Parallel";
   };
 
@@ -94,7 +109,8 @@ type SucceedState = BaseState & {
 
 type TaskState = BaseState &
   EndableOrNextable &
-  Assignable & {
+  Assignable & 
+  Retriable & {
     readonly Type: "Task";
   };
 
