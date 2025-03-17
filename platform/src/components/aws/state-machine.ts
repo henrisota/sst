@@ -6,12 +6,22 @@ import { StateMachineArgs as PulumiStateMachineArgs } from "@pulumi/aws/sfn";
 import { Input } from "../input";
 import { physicalName } from "../naming";
 
+type JSONValue = string | number | boolean | null | JSONObject | JSONArray;
+
+interface JSONObject {
+  [key: string]: JSONValue;
+}
+
+interface JSONArray extends Array<JSONValue> {}
+
 type Never<T, U> = {
   [K in Exclude<keyof U, keyof T>]?: never;
 };
 type Either<T, U> = (T & Never<T, U>) | (U & Never<U, T>);
 
 type QueryLanguage = "JSONata" | "JSONPath" | string;
+
+type JSONataExpression = string;
 
 type StateName = string;
 type StateType =
@@ -97,9 +107,20 @@ type ParallelState = BaseState &
     readonly Type: "Parallel";
   };
 
+type JSONataOutput = {
+  Output?: JSONValue | JSONataExpression;
+};
+
+type JSONPathResult = {
+  Result?: JSONValue;
+  ResultPath?: string;
+  Parameters?: Record<string, unknown>;
+};
+
 type PassState = BaseState &
   EndableOrNextable &
-  Assignable & {
+  Assignable &
+  Either<JSONataOutput, JSONPathResult> & {
     readonly Type: "Pass";
   };
 
