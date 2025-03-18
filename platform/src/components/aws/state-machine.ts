@@ -1,9 +1,9 @@
-import { Component, Transform, transform } from "../component";
 import { ComponentResourceOptions, Output } from "@pulumi/pulumi";
-import { Link } from "../link";
 import { sfn } from "@pulumi/aws";
 import { StateMachineArgs as PulumiStateMachineArgs } from "@pulumi/aws/sfn";
+import { Component, Transform, transform } from "../component";
 import { Input } from "../input";
+import { Link } from "../link";
 import { physicalName } from "../naming";
 
 type JSONValue = string | number | boolean | null | JSONObject | JSONArray;
@@ -14,14 +14,27 @@ interface JSONObject {
 
 interface JSONArray extends Array<JSONValue> {}
 
+type JSONataExpression = string;
+type JSONataOutputType = JSONValue | JSONataExpression;
+type JSONataOutput = {
+  Output: JSONataOutputType;
+};
+
+type JSONPathResulType = JSONValue;
+type JSONPathResultPathType = string;
+type JSONPathParametersType = Record<string, unknown>;
+type JSONPathResult = {
+  Parameters: JSONPathParametersType;
+  Result: JSONPathResulType;
+  ResultPath: JSONPathResultPathType;
+};
+
 type Never<T, U> = {
   [K in Exclude<keyof U, keyof T>]?: never;
 };
 type Either<T, U> = (T & Never<T, U>) | (U & Never<U, T>);
 
 type QueryLanguage = "JSONata" | "JSONPath" | string;
-
-type JSONataExpression = string;
 
 type StateName = string;
 type StateType =
@@ -51,14 +64,24 @@ type ErrorCode =
   | "States.ResultWriterFailed"
   | string;
 
-interface Retrier {
+type Retrier = {
   ErrorEquals: ErrorCode[];
   IntervalSeconds?: number;
   MaxAttempts?: number;
   MaxDelaySeconds?: number;
   JitterStrategy?: string;
   BackoffRate?: number;
-}
+};
+
+type Catcher = Assignable &
+  Either<
+    Partial<JSONataOutput>,
+    Partial<Pick<JSONPathResult, "ResultPath">>
+  > & {
+    ErrorEquals: ErrorCode[];
+    Next: StateName;
+    Comment?: string;
+  };
 
 interface BaseState {
   Type: StateType;
@@ -82,6 +105,10 @@ interface Retriable {
   Retry?: Retrier[];
 }
 
+interface Catchable {
+  Catch?: Catcher[];
+}
+
 type EndableOrNextable = Either<Endable, Nextable>;
 
 type ChoiceState = BaseState &
@@ -96,31 +123,23 @@ type FailState = BaseState & {
 type MapState = BaseState &
   EndableOrNextable &
   Assignable &
-  Retriable & {
+  Retriable &
+  Catchable & {
     readonly Type: "Map";
   };
 
 type ParallelState = BaseState &
   EndableOrNextable &
   Assignable &
-  Retriable & {
+  Retriable &
+  Catchable & {
     readonly Type: "Parallel";
   };
-
-type JSONataOutput = {
-  Output?: JSONValue | JSONataExpression;
-};
-
-type JSONPathResult = {
-  Result?: JSONValue;
-  ResultPath?: string;
-  Parameters?: Record<string, unknown>;
-};
 
 type PassState = BaseState &
   EndableOrNextable &
   Assignable &
-  Either<JSONataOutput, JSONPathResult> & {
+  Either<Partial<JSONataOutput>, Partial<JSONPathResult>> & {
     readonly Type: "Pass";
   };
 
@@ -130,8 +149,9 @@ type SucceedState = BaseState & {
 
 type TaskState = BaseState &
   EndableOrNextable &
-  Assignable & 
-  Retriable & {
+  Assignable &
+  Retriable &
+  Catchable & {
     readonly Type: "Task";
   };
 
