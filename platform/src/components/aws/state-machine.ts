@@ -169,9 +169,13 @@ type PassState = BaseState &
     readonly Type: "Pass";
   };
 
-type SucceedState = BaseState & {
-  readonly Type: "Succeed";
-};
+type SucceedState = BaseState &
+  Either<
+    Partial<Pick<JSONatalike, "Output">>,
+    Partial<Pick<JSONPathlike, "InputPath" | "OutputPath">>
+  > & {
+    readonly Type: "Succeed";
+  };
 
 type TaskState = BaseState &
   EndableOrNextable &
