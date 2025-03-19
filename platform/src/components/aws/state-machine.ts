@@ -6,27 +6,32 @@ import { Input } from "../input";
 import { Link } from "../link";
 import { physicalName } from "../naming";
 
-type JSONValue = string | number | boolean | null | JSONObject | JSONArray;
-
+interface JSONArray extends Array<JSONValue> {}
 interface JSONObject {
   [key: string]: JSONValue;
 }
+type JSONValue = string | number | boolean | null | JSONObject | JSONArray;
 
-interface JSONArray extends Array<JSONValue> {}
-
-type JSONataExpression = string;
-type JSONataOutputType = JSONValue | JSONataExpression;
-type JSONataOutput = {
-  Output: JSONataOutputType;
+type JSONataArguments = JSONValue;
+type JSONataOutput = JSONValue;
+type JSONatalike = {
+  Arguments: JSONataArguments;
+  Output: JSONataOutput;
 };
 
-type JSONPathResulType = JSONValue;
-type JSONPathResultPathType = string;
-type JSONPathParametersType = Record<string, unknown>;
-type JSONPathResult = {
-  Parameters: JSONPathParametersType;
-  Result: JSONPathResulType;
-  ResultPath: JSONPathResultPathType;
+type JSONPathInputPath = string | null;
+type JSONPathOutputpath = string | null;
+type JSONPathParameters = Record<string, unknown>;
+type JSONPathResult = JSONValue;
+type JSONPathResultPath = string | null;
+type JSONPathResultSelector = Record<string, unknown>;
+type JSONPathlike = {
+  InputPath: JSONPathInputPath;
+  OutputPath: JSONPathOutputpath;
+  Parameters: JSONPathParameters;
+  Result: JSONPathResult;
+  ResultPath: JSONPathResultPath;
+  ResultSelector: JSONPathResultSelector;
 };
 
 type Never<T, U> = {
@@ -75,8 +80,8 @@ type Retrier = {
 
 type Catcher = Assignable &
   Either<
-    Partial<JSONataOutput>,
-    Partial<Pick<JSONPathResult, "ResultPath">>
+    Partial<Pick<JSONatalike, "Output">>,
+    Partial<Pick<JSONPathlike, "ResultPath">>
   > & {
     ErrorEquals: ErrorCode[];
     Next: StateName;
@@ -109,6 +114,24 @@ interface Catchable {
   Catch?: Catcher[];
 }
 
+type Timeoutable = Either<
+  {
+    TimeoutSeconds?: number | string;
+  },
+  {
+    TimeoutSecondsPath?: string;
+  }
+>;
+
+type Heartbeatable = Either<
+  {
+    HeartbeatSeconds?: number | string;
+  },
+  {
+    HeartbeatSecondsPath?: string;
+  }
+>;
+
 type EndableOrNextable = Either<Endable, Nextable>;
 
 type ChoiceState = BaseState &
@@ -139,7 +162,10 @@ type ParallelState = BaseState &
 type PassState = BaseState &
   EndableOrNextable &
   Assignable &
-  Either<Partial<JSONataOutput>, Partial<JSONPathResult>> & {
+  Either<
+    Partial<Pick<JSONatalike, "Output">>,
+    Partial<Pick<JSONPathlike, "Result">>
+  > & {
     readonly Type: "Pass";
   };
 
@@ -151,8 +177,25 @@ type TaskState = BaseState &
   EndableOrNextable &
   Assignable &
   Retriable &
-  Catchable & {
+  Catchable &
+  Timeoutable &
+  Heartbeatable &
+  Either<
+    Partial<Pick<JSONatalike, "Arguments" | "Output">>,
+    Partial<
+      Pick<
+        JSONPathlike,
+        | "InputPath"
+        | "OutputPath"
+        | "Parameters"
+        | "ResultPath"
+        | "ResultSelector"
+      >
+    >
+  > & {
     readonly Type: "Task";
+    Resource: string;
+    Credentials?: JSONValue;
   };
 
 type WaitState = BaseState &
