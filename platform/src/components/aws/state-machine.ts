@@ -11,6 +11,10 @@ type Never<T, U> = {
 };
 type Either<T, U> = (T & Never<T, U>) | (U & Never<U, T>);
 
+type OneOf<T, F extends keyof T> = Pick<T, F> & {
+  [K in keyof Omit<T, F>]?: never;
+};
+
 type QueryLanguage = "JSONata" | "JSONPath" | string;
 
 interface JSONArray extends Array<JSONValue> {}
@@ -70,6 +74,55 @@ type TimestampPath = {
 type SecondsOrTimestamp = Either<Seconds, Timestamp>;
 type SecondsPathOrTimestampPath = Either<SecondsPath, TimestampPath>;
 
+type ComparisonOperatorType =
+  | "StringEquals"
+  | "StringEqualsPath"
+  | "StringLessThan"
+  | "StringLessThanPath"
+  | "StringGreaterThan"
+  | "StringGreaterThanPath"
+  | "StringLessThanEquals"
+  | "StringLessThanEqualsPath"
+  | "StringGreaterThanEquals"
+  | "StringGreaterThanEqualsPath"
+  | "StringMatches"
+  | "NumericEquals"
+  | "NumericEqualsPath"
+  | "NumericLessThan"
+  | "NumericLessThanPath"
+  | "NumericGreaterThan"
+  | "NumericGreaterThanPath"
+  | "NumericLessThanEquals"
+  | "NumericLessThanEqualsPath"
+  | "NumericGreaterThanEquals"
+  | "NumericGreaterThanEqualsPath"
+  | "BooleanEquals"
+  | "BooleanEqualsPath"
+  | "TimestampEquals"
+  | "TimestampEqualsPath"
+  | "TimestampLessThan"
+  | "TimestampLessThanPath"
+  | "TimestampGreaterThan"
+  | "TimestampGreaterThanPath"
+  | "TimestampLessThanEquals"
+  | "TimestampLessThanEqualsPath"
+  | "TimestampGreaterThanEquals"
+  | "TimestampGreaterThanEqualsPath"
+  | "IsNull"
+  | "IsPresent"
+  | "IsNumeric"
+  | "IsString"
+  | "IsBoolean"
+  | "IsTimestamp";
+type ComparisonOperatorFields = {
+  [K in ComparisonOperatorType]?: JSONValue;
+};
+type ComparisonOperator = {
+  [K in keyof ComparisonOperatorFields]: {
+    [P in K]: ComparisonOperatorFields[K];
+  } & Partial<Record<Exclude<keyof ComparisonOperatorFields, K>, never>>;
+}[keyof ComparisonOperatorFields];
+
 type StateName = string;
 type StateType =
   | "Choice"
@@ -116,6 +169,27 @@ type Catcher = Assignable &
     Next: StateName;
     Comment?: string;
   };
+
+type Condition = {
+  Condition: boolean | string;
+};
+
+type BooleanExpression = Either<
+  Either<{ And: ChoiceRule[] }, { Or: ChoiceRule[] }>,
+  { Not: ChoiceRule }
+>;
+
+type DatatestExpression = {
+  Variable: string;
+} & ComparisonOperator;
+
+type ChoiceRule = Assignable &
+  Either<
+    Condition & Partial<Pick<JSONatalike, "Output">>,
+    Either<BooleanExpression, DatatestExpression>
+  >;
+
+type Choice = ChoiceRule & Nextable;
 
 interface BaseState {
   Type: StateType;
@@ -164,8 +238,14 @@ type Heartbeatable = Either<
 type EndableOrNextable = Either<Endable, Nextable>;
 
 type ChoiceState = BaseState &
-  Assignable & {
+  Assignable &
+  Either<
+    Partial<Pick<JSONatalike, "Output">>,
+    Partial<Pick<JSONPathlike, "InputPath" | "OutputPath">>
+  > & {
     readonly Type: "Choice";
+    Choices: Choice[];
+    Default?: string;
   };
 
 type FailState = BaseState &
