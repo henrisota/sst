@@ -41,6 +41,19 @@ type JSONPathlike = {
   ResultSelector: JSONPathResultSelector;
 };
 
+type Error = {
+  Error?: string;
+};
+type Cause = {
+  Cause?: string;
+};
+type ErrorPath = {
+  ErrorPath?: string;
+};
+type CausePath = {
+  CausePath?: string;
+};
+
 type Seconds = {
   Seconds: string | number;
 };
@@ -155,9 +168,11 @@ type ChoiceState = BaseState &
     readonly Type: "Choice";
   };
 
-type FailState = BaseState & {
-  readonly Type: "Fail";
-};
+type FailState = BaseState &
+  Either<Error, ErrorPath> &
+  Either<Cause, CausePath> & {
+    readonly Type: "Fail";
+  };
 
 type MapState = BaseState &
   EndableOrNextable &
