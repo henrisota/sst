@@ -195,7 +195,12 @@ type PassState = BaseState &
   Assignable &
   Either<
     Partial<Pick<JSONatalike, "Output">>,
-    Partial<Pick<JSONPathlike, "Result">>
+    Partial<
+      Pick<
+        JSONPathlike,
+        "InputPath" | "OutputPath" | "Parameters" | "Result" | "ResultPath"
+      >
+    >
   > & {
     readonly Type: "Pass";
   };
@@ -238,7 +243,8 @@ type WaitState = BaseState &
   Assignable &
   Either<
     Partial<Pick<JSONatalike, "Output">> & SecondsOrTimestamp,
-    Either<SecondsOrTimestamp, SecondsPathOrTimestampPath>
+    Partial<Pick<JSONPathlike, "InputPath" | "OutputPath">> &
+      Either<SecondsOrTimestamp, SecondsPathOrTimestampPath>
   > & {
     readonly Type: "Wait";
   };
