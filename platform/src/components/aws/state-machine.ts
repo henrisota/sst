@@ -95,7 +95,7 @@ interface BaseState {
 }
 
 interface Assignable {
-  Assign?: Record<string, unknown>;
+  Assign?: Record<string, JSONValue>;
 }
 
 interface Endable {
