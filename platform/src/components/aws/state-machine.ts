@@ -6,6 +6,13 @@ import { Input } from "../input";
 import { Link } from "../link";
 import { physicalName } from "../naming";
 
+type Never<T, U> = {
+  [K in Exclude<keyof U, keyof T>]?: never;
+};
+type Either<T, U> = (T & Never<T, U>) | (U & Never<U, T>);
+
+type QueryLanguage = "JSONata" | "JSONPath" | string;
+
 interface JSONArray extends Array<JSONValue> {}
 interface JSONObject {
   [key: string]: JSONValue;
@@ -34,12 +41,21 @@ type JSONPathlike = {
   ResultSelector: JSONPathResultSelector;
 };
 
-type Never<T, U> = {
-  [K in Exclude<keyof U, keyof T>]?: never;
+type Seconds = {
+  Seconds: string | number;
 };
-type Either<T, U> = (T & Never<T, U>) | (U & Never<U, T>);
+type Timestamp = {
+  Timestamp: string;
+};
+type SecondsPath = {
+  SecondsPath: string;
+};
+type TimestampPath = {
+  TimestampPath: string;
+};
 
-type QueryLanguage = "JSONata" | "JSONPath" | string;
+type SecondsOrTimestamp = Either<Seconds, Timestamp>;
+type SecondsPathOrTimestampPath = Either<SecondsPath, TimestampPath>;
 
 type StateName = string;
 type StateType =
@@ -204,7 +220,11 @@ type TaskState = BaseState &
 
 type WaitState = BaseState &
   EndableOrNextable &
-  Assignable & {
+  Assignable &
+  Either<
+    Partial<Pick<JSONatalike, "Output">> & SecondsOrTimestamp,
+    Either<SecondsOrTimestamp, SecondsPathOrTimestampPath>
+  > & {
     readonly Type: "Wait";
   };
 
