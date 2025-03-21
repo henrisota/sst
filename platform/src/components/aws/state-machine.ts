@@ -133,6 +133,7 @@ type StateType =
   | "Succeed"
   | "Task"
   | "Wait";
+type States = Record<StateName, State>;
 
 type ErrorCode =
   | "States.ALL"
@@ -190,6 +191,11 @@ type ChoiceRule = Assignable &
   >;
 
 type Choice = ChoiceRule & Nextable;
+
+type Branch = {
+  StartAt: StateName;
+  States: States;
+};
 
 interface BaseState {
   Type: StateType;
@@ -266,8 +272,22 @@ type ParallelState = BaseState &
   EndableOrNextable &
   Assignable &
   Retriable &
-  Catchable & {
+  Catchable &
+  Either<
+    Partial<Pick<JSONatalike, "Arguments" | "Output">>,
+    Partial<
+      Pick<
+        JSONPathlike,
+        | "InputPath"
+        | "OutputPath"
+        | "Parameters"
+        | "ResultPath"
+        | "ResultSelector"
+      >
+    >
+  > & {
     readonly Type: "Parallel";
+    Branches: Branch[];
   };
 
 type PassState = BaseState &
@@ -341,7 +361,7 @@ type State =
 
 export interface StateMachineDefinition {
   StartAt: StateName;
-  States: Record<StateName, State>;
+  States: States;
   QueryLanguage?: QueryLanguage;
   Comment?: string;
   Version?: string;
