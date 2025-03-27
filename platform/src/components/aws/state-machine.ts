@@ -19,23 +19,24 @@ interface JSONObject {
 }
 type JSONValue = string | number | boolean | null | JSONObject | JSONArray;
 
-type JSONataArguments = JSONValue;
-type JSONataOutput = JSONValue;
+type JSONataExpression = string;
+type JSONataArguments = JSONValue | JSONataExpression;
+type JSONataOutput = JSONValue | JSONataExpression;
 type JSONatalike = {
   Arguments: JSONataArguments;
   Output: JSONataOutput;
 } & {
-  BatchInput: string;
-  Items: JSONObject[] | string;
-  ItemSelector: string;
+  BatchInput: JSONObject | JSONataExpression;
+  Items: JSONObject[] | JSONataExpression;
+  ItemSelector: JSONObject | JSONataExpression;
 };
 
 type JSONPathInputPath = string | null;
 type JSONPathOutputpath = string | null;
-type JSONPathParameters = Record<string, unknown>;
+type JSONPathParameters = JSONObject;
 type JSONPathResult = JSONValue;
 type JSONPathResultPath = string | null;
-type JSONPathResultSelector = Record<string, unknown>;
+type JSONPathResultSelector = JSONObject;
 type JSONPathlike = {
   InputPath: JSONPathInputPath;
   OutputPath: JSONPathOutputpath;
@@ -50,10 +51,10 @@ type JSONPathlike = {
 };
 
 type Error = {
-  Error?: string;
+  Error?: string | JSONataExpression;
 };
 type Cause = {
-  Cause?: string;
+  Cause?: string | JSONataExpression;
 };
 type ErrorPath = {
   ErrorPath?: string;
@@ -63,10 +64,10 @@ type CausePath = {
 };
 
 type Seconds = {
-  Seconds: string | number;
+  Seconds: number | JSONataExpression;
 };
 type Timestamp = {
-  Timestamp: string;
+  Timestamp: string | JSONataExpression;
 };
 type SecondsPath = {
   SecondsPath: string;
@@ -176,7 +177,7 @@ type Catcher = Assignable &
   };
 
 type Condition = {
-  Condition: boolean | string;
+  Condition: boolean | JSONataExpression;
 };
 
 type BooleanExpression = Either<
@@ -227,7 +228,7 @@ type Iterator = {
 
 type ReaderConfig = Either<
   {
-    MaxItems?: number | string;
+    MaxItems?: number | JSONataExpression;
   },
   {
     MaxItemsPath?: string;
@@ -253,7 +254,7 @@ type ItemBatcher = Either<
   (
     | Either<
         {
-          MaxItemsPerBatch: number | string;
+          MaxItemsPerBatch: number | JSONataExpression;
         },
         {
           MaxItemsPerBatchPath: string;
@@ -261,7 +262,7 @@ type ItemBatcher = Either<
       >
     | Either<
         {
-          MaxInputBytesPerBatch: number | string;
+          MaxInputBytesPerBatch: number | JSONataExpression;
         },
         {
           MaxInputBytesPerBatchPath: string;
@@ -275,23 +276,6 @@ type ResultWriter = Either<
 > & {
   Resource: string;
 };
-
-type FailureTolerance = Either<
-  {
-    ToleratedFailureCount?: number | string;
-  },
-  {
-    ToleratedFailureCountPath?: string;
-  }
-> &
-  Either<
-    {
-      ToleratedFailurePercentage?: number | string;
-    },
-    {
-      ToleratedFailurePercentagePath?: string;
-    }
-  >;
 
 interface BaseState {
   Type: StateType;
@@ -321,7 +305,7 @@ interface Catchable {
 
 type Timeoutable = Either<
   {
-    TimeoutSeconds?: number | string;
+    TimeoutSeconds?: number | JSONataExpression;
   },
   {
     TimeoutSecondsPath?: string;
@@ -330,12 +314,29 @@ type Timeoutable = Either<
 
 type Heartbeatable = Either<
   {
-    HeartbeatSeconds?: number | string;
+    HeartbeatSeconds?: number | JSONataExpression;
   },
   {
     HeartbeatSecondsPath?: string;
   }
 >;
+
+type FailureTolerable = Either<
+  {
+    ToleratedFailureCount?: number | JSONataExpression;
+  },
+  {
+    ToleratedFailureCountPath?: string;
+  }
+> &
+  Either<
+    {
+      ToleratedFailurePercentage?: number | JSONataExpression;
+    },
+    {
+      ToleratedFailurePercentagePath?: string;
+    }
+  >;
 
 type EndableOrNextable = Either<Endable, Nextable>;
 
@@ -361,6 +362,7 @@ type MapState = BaseState &
   Assignable &
   Retriable &
   Catchable &
+  FailureTolerable &
   Either<ItemProcessor, Iterator> &
   Either<
     Partial<Pick<JSONatalike, "Items" | "Output">>,
@@ -378,13 +380,12 @@ type MapState = BaseState &
   > &
   Either<
     {
-      MaxConcurrency?: number | string;
+      MaxConcurrency?: number | JSONataExpression;
     },
     {
       MaxConcurrencyPath?: string;
     }
-  > &
-  FailureTolerance & {
+  > & {
     readonly Type: "Map";
     ItemReader?: ItemReader;
     ItemBatcher?: ItemBatcher;
