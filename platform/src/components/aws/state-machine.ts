@@ -11,10 +11,6 @@ type Never<T, U> = {
 };
 type Either<T, U> = (T & Never<T, U>) | (U & Never<U, T>);
 
-type OneOf<T, F extends keyof T> = Pick<T, F> & {
-  [K in keyof Omit<T, F>]?: never;
-};
-
 type QueryLanguage = "JSONata" | "JSONPath" | string;
 
 interface JSONArray extends Array<JSONValue> {}
@@ -28,6 +24,10 @@ type JSONataOutput = JSONValue;
 type JSONatalike = {
   Arguments: JSONataArguments;
   Output: JSONataOutput;
+} & {
+  BatchInput: string;
+  Items: JSONObject[] | string;
+  ItemSelector: string;
 };
 
 type JSONPathInputPath = string | null;
@@ -43,6 +43,10 @@ type JSONPathlike = {
   Result: JSONPathResult;
   ResultPath: JSONPathResultPath;
   ResultSelector: JSONPathResultSelector;
+} & {
+  BatchInput: JSONObject;
+  ItemsPath: string;
+  ItemSelector: JSONObject;
 };
 
 type Error = {
@@ -197,6 +201,98 @@ type Branch = {
   States: States;
 };
 
+type InlineProcessorConfig = {
+  Mode: "INLINE";
+};
+type DistributedProcessorConfig = {
+  Mode: "DISTRIBUTED";
+  ExecutionType: "STANDARD" | "STANDARD";
+};
+type ProcessorConfig = Either<
+  InlineProcessorConfig,
+  DistributedProcessorConfig
+>;
+type ItemProcessorType = {
+  StartAt: StateName;
+  States: States;
+  ProcessorConfig?: ProcessorConfig;
+};
+
+type ItemProcessor = {
+  ItemProcessor: ItemProcessorType;
+};
+type Iterator = {
+  Iterator: ItemProcessorType;
+};
+
+type ReaderConfig = Either<
+  {
+    MaxItems?: number | string;
+  },
+  {
+    MaxItemsPath?: string;
+  }
+> & {
+  InputType?: "CSV" | "JSON" | "JSONL" | "MANIFEST";
+  CSVDelimiter?: "COMMA" | "PIPE" | "SEMICOLON" | "SPACE" | "TAB";
+  CSVHeaderLocation?: "FIRST_ROW" | "GIVEN";
+  CSVHeaders?: string[];
+};
+type ItemReader = Either<
+  Partial<Pick<JSONatalike, "Arguments">>,
+  Partial<Pick<JSONPathlike, "Parameters">>
+> & {
+  Resource: string;
+  ReaderConfig?: ReaderConfig;
+};
+
+type ItemBatcher = Either<
+  Partial<Pick<JSONatalike, "BatchInput">>,
+  Partial<Pick<JSONPathlike, "BatchInput">>
+> &
+  (
+    | Either<
+        {
+          MaxItemsPerBatch: number | string;
+        },
+        {
+          MaxItemsPerBatchPath: string;
+        }
+      >
+    | Either<
+        {
+          MaxInputBytesPerBatch: number | string;
+        },
+        {
+          MaxInputBytesPerBatchPath: string;
+        }
+      >
+  );
+
+type ResultWriter = Either<
+  Partial<Pick<JSONatalike, "Arguments">>,
+  Partial<Pick<JSONPathlike, "Parameters">>
+> & {
+  Resource: string;
+};
+
+type FailureTolerance = Either<
+  {
+    ToleratedFailureCount?: number | string;
+  },
+  {
+    ToleratedFailureCountPath?: string;
+  }
+> &
+  Either<
+    {
+      ToleratedFailurePercentage?: number | string;
+    },
+    {
+      ToleratedFailurePercentagePath?: string;
+    }
+  >;
+
 interface BaseState {
   Type: StateType;
   Comment?: string;
@@ -264,8 +360,35 @@ type MapState = BaseState &
   EndableOrNextable &
   Assignable &
   Retriable &
-  Catchable & {
+  Catchable &
+  Either<ItemProcessor, Iterator> &
+  Either<
+    Partial<Pick<JSONatalike, "Items" | "Output">>,
+    Partial<
+      Pick<
+        JSONPathlike,
+        | "InputPath"
+        | "ItemSelector"
+        | "Parameters"
+        | "OutputPath"
+        | "ResultPath"
+        | "ResultSelector"
+      >
+    >
+  > &
+  Either<
+    {
+      MaxConcurrency?: number | string;
+    },
+    {
+      MaxConcurrencyPath?: string;
+    }
+  > &
+  FailureTolerance & {
     readonly Type: "Map";
+    ItemReader?: ItemReader;
+    ItemBatcher?: ItemBatcher;
+    ResultWriter?: ResultWriter;
   };
 
 type ParallelState = BaseState &
