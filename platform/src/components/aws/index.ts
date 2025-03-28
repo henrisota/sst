@@ -30,6 +30,7 @@ export * from "./router.js";
 export * from "./service.js";
 export * from "./sns-topic.js";
 export * from "./solid-start.js";
+export * from "./state-machine.js";
 export * from "./tan-stack-start.js";
 export * from "./task.js";
 export * from "./nuxt.js";
