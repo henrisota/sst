@@ -168,6 +168,7 @@ export class Component extends ComponentResource {
               "aws:ses/domainIdentityVerification:DomainIdentityVerification",
               "aws:sesv2/configurationSetEventDestination:ConfigurationSetEventDestination",
               "aws:sesv2/emailIdentity:EmailIdentity",
+              "aws:sfn/stateMachine:StateMachine",
               "aws:sns/topicPolicy:TopicPolicy",
               "aws:sns/topicSubscription:TopicSubscription",
               "aws:sqs/queuePolicy:QueuePolicy",
@@ -274,6 +275,7 @@ export class Component extends ComponentResource {
               64,
               { lower: true },
             ],
+            "aws:sfn/stateMachine:StateMachine": ["name", 80],
             "aws:sns/topic:Topic": [
               "name",
               256,
