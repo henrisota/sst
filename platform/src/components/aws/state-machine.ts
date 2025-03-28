@@ -1,10 +1,16 @@
-import { ComponentResourceOptions, Output } from "@pulumi/pulumi";
-import { sfn } from "@pulumi/aws";
+import {
+  ComponentResourceOptions,
+  interpolate,
+  output,
+  Output,
+} from "@pulumi/pulumi";
+import { getRegionOutput, iam, sfn } from "@pulumi/aws";
 import { StateMachineArgs as PulumiStateMachineArgs } from "@pulumi/aws/sfn";
 import { Component, Transform, transform } from "../component";
 import { Input } from "../input";
 import { Link } from "../link";
 import { physicalName } from "../naming";
+import { parseRoleArn } from "./helpers/arn";
 
 type Never<T, U> = {
   [K in Exclude<keyof U, keyof T>]?: never;
@@ -493,12 +499,16 @@ export interface StateMachineDefinition {
 }
 
 export interface StateMachineArgs
-  extends Omit<PulumiStateMachineArgs, "definition"> {
+  extends Omit<PulumiStateMachineArgs, "definition" | "roleArn"> {
   /**
    * The [Amazon States Language](https://docs.aws.amazon.com/step-functions/latest/dg/concepts-amazon-states-language.html)
    * definition of the state machine.
    */
   definition: StateMachineDefinition;
+  /**
+   * The Amazon Resource Name (ARN) of the IAM role to use for this state machine.
+   */
+  roleArn?: string;
   /**
    * [Transform](/docs/components#transform) how this component creates its underlying
    * resources.
@@ -520,6 +530,7 @@ export class StateMachine extends Component implements Link.Linkable {
   private constructorName: string;
   private constructorOpts: ComponentResourceOptions;
   private stateMachine: Output<sfn.StateMachine>;
+  private region: Output<string>;
 
   constructor(
     name: string,
@@ -527,13 +538,39 @@ export class StateMachine extends Component implements Link.Linkable {
     opts: ComponentResourceOptions = {},
   ) {
     super(__pulumiType, name, args, opts);
-    const self = this;
-    this.constructorName = name;
-    this.constructorOpts = opts;
 
+    const self = this;
+    const parent = this;
+    const region = normalizeRegion();
+    const role = createStateMachineRole();
     const stateMachine = createStateMachine();
 
+    this.constructorName = name;
+    this.constructorOpts = opts;
+    this.region = region;
     this.stateMachine = stateMachine as unknown as Output<sfn.StateMachine>;
+
+    function normalizeRegion() {
+      return getRegionOutput(undefined, { parent }).name;
+    }
+
+    function createStateMachineRole() {
+      if (args.roleArn) {
+        return iam.Role.get(
+          `${name}StateMachineRole`,
+          output(args.roleArn).apply(parseRoleArn).roleName,
+          {},
+          { parent },
+        );
+      }
+
+      return new iam.Role(`${name}StateMachineRole`, {
+        name: `${name}StateMachineRole`,
+        assumeRolePolicy: iam.assumeRolePolicyForPrincipal({
+          Service: interpolate`states.${region}.amazonaws.com`,
+        }),
+      });
+    }
 
     function createStateMachine() {
       return new sfn.StateMachine(
@@ -543,7 +580,7 @@ export class StateMachine extends Component implements Link.Linkable {
           {
             name: physicalName(80, name),
             definition: $jsonStringify(args.definition),
-            roleArn: args.roleArn,
+            roleArn: role.arn,
           } as PulumiStateMachineArgs,
           { parent: self },
         ),
