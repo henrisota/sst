@@ -518,6 +518,10 @@ export interface StateMachineArgs
      * Transform the Step Functions State Machine resource.
      */
     stateMachine?: Transform<sfn.StateMachineArgs>;
+    /**
+     * Transform the IAM Role resource.
+     */
+    role?: Transform<iam.RoleArgs>;
   };
 }
 
@@ -563,12 +567,21 @@ export class StateMachine extends Component implements Link.Linkable {
         );
       }
 
-      return new iam.Role(`${name}StateMachineRole`, {
-        name: `${name}StateMachineRole`,
-        assumeRolePolicy: iam.assumeRolePolicyForPrincipal({
-          Service: interpolate`states.${region}.amazonaws.com`,
-        }),
-      });
+      return new iam.Role(
+        ...transform(
+          args.transform?.role,
+          `${name}StateMachineRole`,
+          {
+            name: `${name}StateMachineRole`,
+            assumeRolePolicy: iam.assumeRolePolicyForPrincipal({
+              Service: interpolate`states.${region}.amazonaws.com`,
+            }),
+          },
+          {
+            parent: self,
+          },
+        ),
+      );
     }
 
     function createStateMachine() {
