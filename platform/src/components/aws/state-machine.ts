@@ -517,7 +517,7 @@ export interface StateMachineArgs
     /**
      * Transform the Step Functions State Machine resource.
      */
-    bus?: Transform<sfn.StateMachineArgs>;
+    stateMachine?: Transform<sfn.StateMachineArgs>;
   };
 }
 
@@ -540,7 +540,6 @@ export class StateMachine extends Component implements Link.Linkable {
     super(__pulumiType, name, args, opts);
 
     const self = this;
-    const parent = this;
     const region = normalizeRegion();
     const role = createStateMachineRole();
     const stateMachine = createStateMachine();
@@ -551,7 +550,7 @@ export class StateMachine extends Component implements Link.Linkable {
     this.stateMachine = stateMachine as unknown as Output<sfn.StateMachine>;
 
     function normalizeRegion() {
-      return getRegionOutput(undefined, { parent }).name;
+      return getRegionOutput(undefined, { parent: self }).name;
     }
 
     function createStateMachineRole() {
@@ -560,7 +559,7 @@ export class StateMachine extends Component implements Link.Linkable {
           `${name}StateMachineRole`,
           output(args.roleArn).apply(parseRoleArn).roleName,
           {},
-          { parent },
+          { parent: self },
         );
       }
 
@@ -575,13 +574,13 @@ export class StateMachine extends Component implements Link.Linkable {
     function createStateMachine() {
       return new sfn.StateMachine(
         ...transform(
-          undefined,
+          args.transform?.stateMachine,
           `${name}StateMachine`,
           {
             name: physicalName(80, name),
             definition: $jsonStringify(args.definition),
             roleArn: role.arn,
-          } as PulumiStateMachineArgs,
+          },
           { parent: self },
         ),
       );
@@ -666,6 +665,7 @@ export class StateMachine extends Component implements Link.Linkable {
   public getSSTLink() {
     return {
       properties: {
+        id: this.stateMachine.id,
         arn: this.arn,
       },
     };
