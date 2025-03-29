@@ -17,7 +17,7 @@ type Never<T, U> = {
 };
 type Either<T, U> = (T & Never<T, U>) | (U & Never<U, T>);
 
-type QueryLanguage = "JSONata" | "JSONPath" | string;
+type QueryLanguage = "JSONata" | "JSONPath";
 
 interface JSONArray extends Array<JSONValue> {}
 interface JSONObject {
